@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "title": "URL 判定の共通化",
+  "summary": "ホスト判定を一箇所に集め、相対リンクを絶対 URL に置き換えた。設計メモも合わせて更新している。generated な OpenAPI は末尾でまとめて確認する。",
+  "problem": "ホスト判定が画面と legacy path で二重になっている。",
+  "core": "g01",
+  "doneWhen": "判定と絶対 URL 化が共通ヘルパーに寄っていることを確認する。",
+  "groups": [
+    {
+      "id": "g01",
+      "title": "URL・ホスト判定の共通基盤",
+      "intent": "デプロイモードごとの URL 生成とホスト判定をヘルパーへ集約する。legacy path でも同じ判定を通す。",
+      "kind": "refactor",
+      "risk": "high",
+      "hunkIds": ["h001", "h002"],
+      "seedIds": [],
+      "annotations": [
+        { "goal": "判定の入口", "hunkId": "h001" },
+        { "goal": "legacy も同じ判定", "hunkId": "h002" }
+      ],
+      "findings": [
+        {
+          "type": "note",
+          "hunkId": "h001",
+          "text": "判定の入口がここに寄っている。"
+        }
+      ]
+    },
+    {
+      "id": "g02",
+      "title": "アプリリンクの絶対 URL 化",
+      "intent": "共通 UI の相対パスをアプリ URL へ置き換える。基盤ヘルパーに依存する。",
+      "kind": "feat",
+      "risk": "medium",
+      "hunkIds": ["h003"],
+      "annotations": [
+        { "goal": "相対パスを絶対 URL に", "hunkId": "h003" }
+      ],
+      "findings": [
+        {
+          "type": "improve",
+          "hunkId": "h003",
+          "line": 12,
+          "side": "new",
+          "text": "フォールバック URL が残っていないか確認する。"
+        }
+      ]
+    },
+    {
+      "id": "g03",
+      "title": "設計文書の更新",
+      "intent": "責務分解を文書側に反映する。実装の後追い。",
+      "kind": "docs",
+      "risk": "low",
+      "hunkIds": ["h004"],
+      "seedIds": ["s001"]
+    }
+  ]
+}

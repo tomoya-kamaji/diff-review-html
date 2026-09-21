@@ -1,0 +1,1902 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>差分レビュー</title>
+  <style>
+    :root {
+      --bg: #f4f4f5;
+      --card: #ffffff;
+      --line: #e4e4e7;
+      --text: #18181b;
+      --muted: #71717a;
+      --soft: #a1a1aa;
+      --ink: #3f3f46;
+      --high: #e11d48;
+      --high-bg: #fff1f2;
+      --high-text: #be123c;
+      --mid: #ca8a04;
+      --mid-bg: #fefce8;
+      --mid-text: #a16207;
+      --low: #71717a;
+      --low-bg: #f4f4f5;
+      --bar: #18181b;
+      --add-bg: #ecfdf3;
+      --del-bg: #fef2f2;
+      --improve: #be123c;
+      --improve-bg: #fff1f2;
+      --unclear: #a16207;
+      --unclear-bg: #fefce8;
+      --note: #1d4ed8;
+      --note-bg: #eff6ff;
+      --nav: #f4f4f5;
+      --st-a: #16a34a;
+      --st-m: #ca8a04;
+      --st-d: #e11d48;
+      --st-r: #7c3aed;
+      --shadow: 0 1px 2px rgba(24, 24, 27, 0.04), 0 10px 28px rgba(24, 24, 27, 0.05);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+    body { display: grid; grid-template-columns: 272px 1fr; }
+    body.sidebar-closed { grid-template-columns: 44px 1fr; }
+    button, input, textarea { font: inherit; }
+    input[type="checkbox"] { accent-color: var(--text); width: 14px; height: 14px; }
+    #sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: #fafafa;
+      border-right: 1px solid var(--line);
+      padding: 18px 16px 28px;
+    }
+    .side-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    body.sidebar-closed #sidebar { padding: 10px 6px; overflow: hidden; }
+    body.sidebar-closed .side-body,
+    body.sidebar-closed .kicker { display: none; }
+    body.sidebar-closed .side-top { justify-content: center; }
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+    }
+    .icon-btn svg { width: 16px; height: 16px; display: block; }
+    .icon-btn .icon-open { display: none; }
+    body.sidebar-closed .icon-btn .icon-close { display: none; }
+    body.sidebar-closed .icon-btn .icon-open { display: block; }
+    main { height: 100vh; overflow-y: auto; min-width: 0; }
+    #groups { padding: 28px 32px 56px; }
+    .kicker { color: var(--soft); font-size: 10px; letter-spacing: 0.08em; font-weight: 600; }
+    #sidebar h1 { font-size: 16px; font-weight: 600; margin: 8px 0 6px; line-height: 1.35; letter-spacing: -0.02em; }
+    .side-stats { color: var(--muted); font-size: 12px; }
+    .progress { margin-top: 10px; }
+    .progress-label { font-size: 12px; color: var(--muted); }
+    .bar { height: 3px; background: #e4e4e7; border-radius: 99px; overflow: hidden; margin-top: 8px; }
+    .bar > i { display: block; height: 100%; background: var(--bar); width: 0; }
+    .toolbar { display: flex; gap: 6px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 6px;
+      padding: 5px 9px;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn:hover { background: #f4f4f5; }
+    .btn.active { border-color: #d4d4d8; background: #f4f4f5; color: var(--text); }
+    .copy-ok { color: #15803d; font-size: 12px; }
+    .tabs { display: flex; gap: 0; margin: 16px 0 10px; border-bottom: 1px solid var(--line); }
+    .tabs button {
+      flex: 1;
+      border: 0;
+      background: transparent;
+      padding: 8px 0;
+      cursor: pointer;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      font-size: 12px;
+    }
+    .tabs button.active { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
+    .nav-group, .tree-file, .tree-dir {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .nav-group { justify-content: space-between; }
+    .nav-group.checked { opacity: 0.55; }
+    .nav-group.active, .tree-file.active { background: var(--nav); }
+    .nav-left { display: flex; gap: 6px; align-items: center; min-width: 0; }
+    .nav-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-meta { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 11px;
+      background: #f4f4f5;
+      color: var(--ink);
+    }
+    .badge.high { background: var(--high-bg); color: var(--high-text); }
+    .badge.medium { background: var(--mid-bg); color: var(--mid-text); }
+    .badge.low { background: var(--low-bg); color: var(--low); }
+    .badge.checked-badge { background: #ecfdf3; color: #15803d; margin-left: 8px; }
+    .issue { color: #b42318; font-size: 11px; }
+    .memo-empty { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+    .memo-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .memo-item:hover { background: var(--nav); }
+    .memo-item-label { color: var(--muted); font-size: 11px; font-family: var(--mono); }
+    .memo-item-text { margin-top: 4px; font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+    .tree { font-family: var(--mono); font-size: 12px; }
+    .tree-children { margin-left: 14px; }
+    .tree-node.closed > .tree-children { display: none; }
+    .st {
+      display: inline-flex;
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .st.A { background: var(--st-a); }
+    .st.M { background: var(--st-m); }
+    .st.D { background: var(--st-d); }
+    .st.R { background: var(--st-r); }
+    .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-right { margin-left: auto; display: flex; gap: 4px; align-items: center; color: var(--muted); font-size: 11px; flex-shrink: 0; }
+    .group {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 20px 18px;
+      margin: 0 0 16px;
+      box-shadow: var(--shadow);
+    }
+    .group.focused { box-shadow: var(--shadow), 0 0 0 2px #d4d4d8; }
+    .group-one-line { display: none; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-size: 14px; }
+    .group.collapsed { padding: 12px 16px; }
+    .group.collapsed .group-one-line { display: flex; }
+    .group.collapsed .group-head,
+    .group.collapsed .group-body { display: none; }
+    .file-list { margin: 8px 0 0; font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: pre; overflow: auto; }
+    .group-head {
+      display: flex; justify-content: space-between; gap: 16px; align-items: flex-start;
+      position: sticky; top: 0; z-index: 5;
+      margin: -16px -20px 0; padding: 14px 20px 10px;
+      background: var(--card);
+      border-radius: 12px 12px 0 0;
+      cursor: pointer;
+    }
+    .group-title { font-size: 16px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; letter-spacing: -0.02em; }
+    .fold-mark { display: inline-block; width: 1em; color: var(--soft); }
+    .brief {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin: 0 0 20px;
+      box-shadow: var(--shadow);
+    }
+    .brief h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--muted); letter-spacing: 0.04em; }
+    .brief-dl { margin: 0; display: grid; gap: 8px; }
+    .brief-row { display: grid; grid-template-columns: 5.5em 1fr; gap: 10px; align-items: start; }
+    .brief-row dt { color: var(--muted); font-size: 12px; padding-top: 2px; font-weight: 500; }
+    .brief-row dd { margin: 0; font-size: 14px; line-height: 1.65; }
+    .brief-links { display: flex; flex-wrap: wrap; gap: 6px; }
+    .intent { margin: 10px 0 0; color: var(--text); font-size: 14px; line-height: 1.7; }
+    .intent b { color: var(--muted); font-weight: 600; }
+    .group-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .hunk-index { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+    .group:not(.scanning) .hunk-index { display: none; }
+    .hunk-index-btn {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      background: transparent;
+      border-radius: 6px;
+      padding: 6px 8px;
+      cursor: pointer;
+    }
+    .hunk-index-btn:hover,
+    .hunk-head:hover { background: #f4f4f5; }
+    .group.has-goals .hunk-index-btn {
+      display: grid;
+      grid-template-columns: 11em 1em auto minmax(0, 1fr) auto;
+      align-items: baseline;
+    }
+    .hunk-goal {
+      color: var(--text);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .hunk-goal-note {
+      padding: 5px 10px 6px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
+      background: transparent;
+      border-bottom: 1px solid var(--line);
+    }
+    .hunk-hid, .hunk-hdr {
+      color: var(--soft);
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .hunk-path {
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .group.scanning .read-body { display: none; }
+    .group:not(.scanning) .read-enter { display: none; }
+    .risk-reason { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .approve {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .hunk {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: visible;
+      background: #fff;
+    }
+    .hunk-head {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      width: 100%;
+      text-align: left;
+      padding: 7px 12px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: #fafafa;
+      cursor: pointer;
+      position: sticky;
+      top: 0;
+      z-index: 6;
+    }
+    .hunk.folded .hunk-body { display: none; }
+    .hunk.folded .hunk-head { border-bottom: 0; }
+    table.diff {
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: fixed;
+      font-family: var(--mono);
+      font-size: 13px;
+      background: #fff;
+    }
+    .diff col.add { width: 22px; }
+    .diff col.ln { width: 2.6em; }
+    .diff col.mk { width: 1em; }
+    .diff col.gap { width: 6px; }
+    .diff.has-notes col.note { width: 22%; }
+    .diff td { vertical-align: top; padding: 0 6px; line-height: 1.5; }
+    .diff td.code { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .diff td.note {
+      font-family: var(--sans);
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: normal;
+      padding: 4px 8px;
+      background: #fafafa;
+      border-left: 1px solid var(--line);
+    }
+    .diff td.note:empty { background: #fff; }
+    .diff td.add-cell { position: relative; padding: 0; overflow: visible; }
+    .line-add {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      margin: 1px auto 0;
+      border: 0;
+      border-radius: 4px;
+      background: var(--bar);
+      color: #fff;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0;
+      cursor: pointer;
+    }
+    .diff-row:hover .line-add,
+    .diff-row:focus-within .line-add,
+    .add-cell.has-memo .line-add { display: inline-flex; }
+    .add-cell.has-memo .line-add {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+    .line-thread td {
+      padding: 0;
+      background: #f4f4f5;
+      border-top: 1px solid var(--line);
+    }
+    .line-note, .line-composer {
+      margin: 8px 12px 10px;
+      max-width: 36rem;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .line-note-meta, .line-composer-meta {
+      color: var(--muted);
+      font-size: 11px;
+      font-family: var(--mono);
+      margin-bottom: 6px;
+    }
+    .line-note-text { font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+    .line-note-actions, .line-composer-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+    .line-composer textarea {
+      width: 100%;
+      min-height: 72px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      resize: vertical;
+    }
+    .ln { color: #a1a1aa; text-align: right; user-select: none; font-size: 11px; }
+    .mk { color: #a1a1aa; user-select: none; font-size: 11px; }
+    .diff td.gap { padding: 0; background: var(--line); }
+    .row-add { background: var(--add-bg); color: var(--text); }
+    .row-del { background: var(--del-bg); color: var(--text); }
+    .row-ctx { background: #fff; color: #71717a; }
+    .row-empty { background: #fafafa; }
+    .row-add.mk { color: #2f6f3e; }
+    .row-del.mk { color: #9b2c2c; }
+    .row-ctx .tok-kw,
+    .row-ctx .tok-str,
+    .row-ctx .tok-cm,
+    .row-ctx .tok-num,
+    .row-ctx .tok-type,
+    .row-ctx .tok-dec { color: #a1a1aa; }
+    .tok-kw { color: #7c3aed; }
+    .tok-str { color: #15803d; }
+    .tok-cm { color: #a1a1aa; font-style: italic; }
+    .tok-num { color: #c2410c; }
+    .tok-type { color: #1d4ed8; }
+    .tok-dec { color: #a16207; }
+    .truncated-note { padding: 8px 12px; color: var(--muted); font-size: 12px; background: #fafafa; border-top: 1px solid var(--line); }
+    .expand {
+      display: block;
+      width: 100%;
+      border: 0;
+      border-top: 1px solid var(--line);
+      background: #fafafa;
+      color: var(--muted);
+      padding: 8px;
+      cursor: pointer;
+    }
+    .finding {
+      margin: 0 0 6px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: normal;
+    }
+    .finding:last-child { margin-bottom: 0; }
+    .finding.improve { background: var(--improve-bg); color: var(--improve); }
+    .finding.unclear { background: var(--unclear-bg); color: var(--unclear); }
+    .finding.note { background: var(--note-bg); color: var(--note); }
+    .finding label { display: flex; gap: 6px; align-items: flex-start; }
+    .hunk-issues {
+      display: grid;
+      gap: 6px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+    .hunk-issues .finding { margin: 0; }
+    .hunk-tools { padding: 8px 12px; border-top: 1px solid var(--line); background: #fafafa; }
+    .read-body > .hunk-tools { margin-top: 10px; border: 0; background: transparent; padding: 0; }
+    .memo { width: 100%; min-height: 64px; margin-top: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+    .hidden { display: none; }
+    .help-float {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .help-panel {
+      width: 240px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 12px 14px 14px;
+    }
+    .help-float.closed .help-panel { display: none; }
+    .help-float:not(.closed) #help-toggle { display: none; }
+    .help-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .help-list { margin: 0; display: grid; gap: 6px; }
+    .help-row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+    .help-row dt {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 650;
+      background: #f4f4f5;
+      border-radius: 5px;
+      padding: 1px 6px;
+      min-width: 1.6em;
+      text-align: center;
+    }
+    .help-row dd { margin: 0; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="side-top">
+      <div class="kicker">REVIEW</div>
+      <button class="btn icon-btn" type="button" id="sidebar-toggle" aria-expanded="true" aria-label="サイドバーを閉じる">
+        <svg class="icon-close" viewBox="0 0 16 16" aria-hidden="true">
+          <path fill="currentColor" d="M10.2 3.2 5.4 8l4.8 4.8-.8.8L3.8 8l5.6-5.6z"/>
+        </svg>
+        <svg class="icon-open" viewBox="0 0 16 16" aria-hidden="true">
+          <path fill="currentColor" d="m5.8 3.2.8-.8L12.2 8 6.6 13.6l-.8-.8L10.6 8z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="side-body">
+    <h1 id="side-title"></h1>
+    <div class="side-stats" id="side-stats"></div>
+    <div class="progress">
+      <div class="progress-label" id="side-progress-label"></div>
+      <div class="bar"><i id="side-progress-bar"></i></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" type="button" id="copy-btn">メモをコピー</button>
+      <span class="copy-ok hidden" id="copy-ok"></span>
+    </div>
+    <div class="tabs">
+      <button type="button" class="active" data-tab="groups" id="tab-btn-groups">グループ</button>
+      <button type="button" data-tab="files" id="tab-btn-files">ファイル</button>
+      <button type="button" data-tab="memos" id="tab-btn-memos">メモ</button>
+    </div>
+    <div id="sort-bar" class="toolbar"></div>
+    <div id="tab-groups"></div>
+    <div id="tab-files" class="hidden"></div>
+    <div id="tab-memos" class="hidden"></div>
+    </div>
+  </aside>
+  <main id="main">
+    <div id="groups">
+      <article id="brief" class="brief"></article>
+      <div id="group-list"></div>
+    </div>
+  </main>
+  <div id="help-float" class="help-float">
+    <div class="help-panel" id="help-panel">
+      <div class="help-head">
+        <span>ショートカット</span>
+        <button class="btn icon-btn" type="button" id="help-close" aria-label="解説を閉じる">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path fill="currentColor" d="M4.2 3.4 8 7.2l3.8-3.8.8.8L8.8 8l3.8 3.8-.8.8L8 8.8l-3.8 3.8-.8-.8L7.2 8 3.4 4.2z"/>
+          </svg>
+        </button>
+      </div>
+      <dl class="help-list">
+        <div class="help-row"><dt>j</dt><dd>次のグループ</dd></div>
+        <div class="help-row"><dt>k</dt><dd>前のグループ</dd></div>
+        <div class="help-row"><dt>J</dt><dd>次のファイル</dd></div>
+        <div class="help-row"><dt>K</dt><dd>前のファイル</dd></div>
+        <div class="help-row"><dt>+</dt><dd>行にメモ（ホバー）</dd></div>
+        <div class="help-row"><dt>c</dt><dd>確認の切り替え</dd></div>
+        <div class="help-row"><dt>f</dt><dd>グループ / ファイル</dd></div>
+        <div class="help-row"><dt>e</dt><dd>走査と精読の切り替え</dd></div>
+        <div class="help-row"><dt>[</dt><dd>サイドバー開閉</dd></div>
+        <div class="help-row"><dt>?</dt><dd>この解説</dd></div>
+      </dl>
+    </div>
+    <button class="btn icon-btn" type="button" id="help-toggle" aria-expanded="true" aria-label="ショートカット解説">?</button>
+  </div>
+  <script id="data" type="application/json">__DATA__</script>
+  <script>
+    const data = JSON.parse(document.getElementById('data').textContent);
+    const mainEl = document.getElementById('main');
+    const groupsEl = document.getElementById('group-list');
+    const riskLabel = { high: '要注意', medium: '注意', low: '低リスク' };
+    const findingLabel = { improve: '要改善', unclear: '意図不明', note: '解説' };
+    const statusLetter = { added: 'A', modified: 'M', deleted: 'D', renamed: 'R' };
+    const storageKey = (group) => `diff-review:v2:${group.stateKey}`;
+
+    function loadState(group) {
+      try {
+        const raw = localStorage.getItem(storageKey(group));
+        if (!raw) return { checked: false, memos: {}, lineMemos: {}, adoptedFindings: [] };
+        const parsed = JSON.parse(raw);
+        return {
+          checked: Boolean(parsed.checked),
+          memos: parsed.memos && typeof parsed.memos === 'object' ? parsed.memos : {},
+          lineMemos: parsed.lineMemos && typeof parsed.lineMemos === 'object' ? parsed.lineMemos : {},
+          adoptedFindings: Array.isArray(parsed.adoptedFindings) ? parsed.adoptedFindings : [],
+        };
+      } catch {
+        return { checked: false, memos: {}, lineMemos: {}, adoptedFindings: [] };
+      }
+    }
+
+    function saveState(group, state) {
+      localStorage.setItem(storageKey(group), JSON.stringify({
+        checked: state.checked,
+        memos: state.memos,
+        lineMemos: state.lineMemos,
+        adoptedFindings: state.adoptedFindings,
+      }));
+    }
+
+    const states = Object.fromEntries(data.groups.map((group) => [group.id, loadState(group)]));
+    const readingIds = new Set(data.groups.map((group) => group.id));
+    const sidebarKey = 'diff-review:sidebar';
+    const helpKey = 'diff-review:help';
+    let sortMode = 'read';
+    let focusIndex = 0;
+    let sideTab = 'groups';
+    let sidebarOpen = true;
+    let observer = null;
+    let hunkBodyObserver = null;
+    const hunkRefs = new WeakMap();
+    const KEYWORDS = new Set([
+      'import', 'export', 'from', 'default', 'as', 'const', 'let', 'var', 'function', 'return',
+      'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'new', 'class',
+      'extends', 'implements', 'interface', 'type', 'enum', 'namespace', 'declare', 'async',
+      'await', 'yield', 'try', 'catch', 'finally', 'throw', 'typeof', 'instanceof', 'in', 'of',
+      'void', 'delete', 'this', 'super', 'null', 'undefined', 'true', 'false', 'readonly',
+      'keyof', 'infer', 'never', 'unknown', 'any', 'string', 'number', 'boolean', 'object',
+      'symbol', 'bigint', 'satisfies', 'abstract', 'static', 'public', 'private', 'protected',
+      'override', 'get', 'set', 'is',
+    ]);
+    const HIGHLIGHT_EXT = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
+
+    function el(tag, attrs, ...children) {
+      const node = document.createElement(tag);
+      if (attrs) {
+        for (const [key, value] of Object.entries(attrs)) {
+          if (value == null || value === false) continue;
+          if (key === 'class') node.className = value;
+          else if (key === 'dataset') Object.assign(node.dataset, value);
+          else if (key.startsWith('on') && typeof value === 'function') node.addEventListener(key.slice(2), value);
+          else if (key === 'checked') node.checked = value;
+          else node.setAttribute(key, value === true ? '' : String(value));
+        }
+      }
+      for (const child of children.flat()) {
+        if (child == null || child === false) continue;
+        node.append(typeof child === 'string' ? document.createTextNode(child) : child);
+      }
+      return node;
+    }
+
+    function oneLine(text, max) {
+      const t = String(text || '').replace(/\s+/g, ' ').trim();
+      const n = max || 80;
+      return t.length > n ? `${t.slice(0, n - 1)}…` : t;
+    }
+
+    function checkedCount() {
+      return data.groups.filter((group) => states[group.id].checked).length;
+    }
+
+    function sortedGroups() {
+      const groups = data.groups.slice();
+      if (sortMode === 'risk') {
+        const rank = { high: 0, medium: 1, low: 2 };
+        groups.sort((a, b) => rank[a.risk] - rank[b.risk] || data.groups.indexOf(a) - data.groups.indexOf(b));
+      }
+      return groups;
+    }
+
+    function fileGroupLabel(file) {
+      if (file.groupIds?.length) return file.groupIds.join(',');
+      return file.groupId || '';
+    }
+
+    function firstHunkId(file) {
+      return file.hunkIds?.[0];
+    }
+
+    function reviewFiles() {
+      const seen = new Set();
+      const files = [];
+      for (const group of sortedGroups()) {
+        for (const file of group.files ?? []) {
+          if (seen.has(file.id)) continue;
+          seen.add(file.id);
+          files.push(file);
+        }
+      }
+      return files;
+    }
+
+    function firstHunkIdInReview(file) {
+      for (const group of sortedGroups()) {
+        const hunk = group.hunks.find((item) => item.fileId === file.id);
+        if (hunk) return hunk.id;
+      }
+      return firstHunkId(file);
+    }
+
+    function currentReviewFileId() {
+      return document.querySelector('.tree-file.active')?.dataset.fileId
+        ?? sortedGroups()[focusIndex]?.files?.[0]?.id
+        ?? reviewFiles()[0]?.id;
+    }
+
+    function focusGroupOfFile(file) {
+      const groups = sortedGroups();
+      const index = groups.findIndex((group) => group.files.some((item) => item.id === file.id));
+      if (index < 0) return;
+      focusIndex = index;
+      const card = document.getElementById(groups[index].id);
+      document.querySelectorAll('.group.focused').forEach((node) => node.classList.remove('focused'));
+      if (card) card.classList.add('focused');
+    }
+
+    function setFileFocus(delta) {
+      const files = reviewFiles();
+      if (files.length === 0) return;
+      let index = files.findIndex((file) => file.id === currentReviewFileId());
+      if (index < 0) index = 0;
+      const next = Math.max(0, Math.min(files.length - 1, index + delta));
+      const file = files[next];
+      if (!file) return;
+      const hunkId = firstHunkIdInReview(file);
+      if (hunkId) revealHunk(hunkId, { smooth: true });
+      focusGroupOfFile(file);
+    }
+
+    function persist(group) {
+      saveState(group, states[group.id]);
+      updateProgress();
+      updateNavGroup(group);
+      renderMemoList();
+      const card = document.getElementById(group.id);
+      if (!card) return;
+      const checked = states[group.id].checked;
+      card.classList.toggle('checked', checked);
+      card.querySelectorAll('.approve input').forEach((input) => { input.checked = checked; });
+      const badge = card.querySelector('.checked-badge');
+      const title = card.querySelector('.group-title');
+      if (checked && title && !badge) title.append(el('span', { class: 'badge checked-badge' }, '確認済'));
+      else if (!checked && badge) badge.remove();
+    }
+
+    function setCollapsed(card, collapsed) {
+      if (!card) return;
+      card.classList.toggle('collapsed', collapsed);
+      const mark = card.querySelector('.group-fold-mark');
+      if (mark) mark.textContent = collapsed ? '▸' : '▾';
+    }
+
+    function setChecked(group, checked) {
+      states[group.id].checked = checked;
+      persist(group);
+      setCollapsed(document.getElementById(group.id), checked);
+    }
+
+    function updateProgress() {
+      const done = checkedCount();
+      const ratio = data.groups.length ? Math.round((done / data.groups.length) * 100) : 0;
+      document.getElementById('side-progress-label').textContent = `確認 ${done}/${data.groups.length}`;
+      document.getElementById('side-progress-bar').style.width = `${ratio}%`;
+    }
+
+    function updateNavGroup(group) {
+      const row = document.querySelector(`.nav-group[data-id="${group.id}"]`);
+      if (!row) return;
+      const checked = states[group.id].checked;
+      row.classList.toggle('checked', checked);
+      const mark = row.querySelector('.nav-mark');
+      if (mark) mark.textContent = checked ? '✓' : '○';
+    }
+
+    function setFocus(index) {
+      const groups = sortedGroups();
+      focusIndex = Math.max(0, Math.min(groups.length - 1, index));
+      const group = groups[focusIndex];
+      if (!group) return;
+      jumpToGroup(group, { focus: true });
+    }
+
+    function listMemoEntries() {
+      const entries = [];
+      for (const group of data.groups) {
+        const state = states[group.id];
+        if (state.memos.group) {
+          entries.push({
+            kind: 'group',
+            groupId: group.id,
+            hunkId: null,
+            label: `${group.id} ${group.title}`,
+            text: state.memos.group,
+          });
+        }
+        for (const hunk of group.hunks) {
+          const memo = state.memos[hunk.id];
+          if (memo) {
+            const end = hunk.newLines > 0 ? hunk.newStart + hunk.newLines - 1 : hunk.newStart;
+            entries.push({
+              kind: 'hunk',
+              groupId: group.id,
+              hunkId: hunk.id,
+              lineKey: null,
+              label: `${hunk.path}:L${hunk.newStart}-${end}`,
+              text: memo,
+            });
+          }
+          for (const [key, text] of Object.entries(state.lineMemos ?? {})) {
+            const parsed = parseLineMemoKey(key);
+            if (!parsed || parsed.hunkId !== hunk.id || !text) continue;
+            const sideLabel = parsed.side === 'old' ? '旧' : '新';
+            entries.push({
+              kind: 'line',
+              groupId: group.id,
+              hunkId: hunk.id,
+              lineKey: key,
+              label: `${hunk.path}:${sideLabel}L${parsed.line}`,
+              text,
+            });
+          }
+        }
+        for (const [index, finding] of group.findings.entries()) {
+          if (!state.adoptedFindings.includes(index)) continue;
+          const mark = finding.type === 'improve' || finding.type === 'unclear' ? '要改善' : '解説';
+          const hunk = group.hunks.find((h) => h.id === finding.hunkId);
+          entries.push({
+            kind: 'adopted',
+            groupId: group.id,
+            hunkId: finding.hunkId,
+            label: `${hunk ? hunk.path : finding.hunkId} · ${mark}`,
+            text: finding.text,
+          });
+        }
+      }
+      return entries;
+    }
+
+    function copyMemos() {
+      const lines = [`## diff-review メモ (${data.scope.command})`, ''];
+      for (const entry of listMemoEntries()) lines.push(`- ${entry.label} ${entry.text}`);
+      navigator.clipboard.writeText(lines.join('\n')).then(() => {
+        const note = document.getElementById('copy-ok');
+        note.textContent = 'コピーしました';
+        note.classList.remove('hidden');
+        setTimeout(() => note.classList.add('hidden'), 2000);
+      });
+    }
+
+    function renderMemoList() {
+      const host = document.getElementById('tab-memos');
+      const entries = listMemoEntries();
+      if (!entries.length) {
+        host.replaceChildren(el('p', { class: 'memo-empty' }, 'メモはまだありません'));
+        return;
+      }
+      host.replaceChildren(...entries.map((entry) => {
+        const row = el('button', { class: 'memo-item', type: 'button' },
+          el('div', { class: 'memo-item-label' }, entry.label),
+          el('div', { class: 'memo-item-text' }, entry.text),
+        );
+        row.addEventListener('click', () => {
+          const group = data.groups.find((item) => item.id === entry.groupId);
+          if (!group) return;
+          if (entry.lineKey && entry.hunkId) revealLineMemo(entry.hunkId, entry.lineKey);
+          else if (entry.hunkId) revealHunk(entry.hunkId);
+          else jumpToGroup(group, { focus: true });
+        });
+        return row;
+      }));
+    }
+
+    function splitRows(lines) {
+      const rows = [];
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        if (line.type !== 'add' && line.type !== 'del') {
+          rows.push({ left: line, right: line, after: [i + 1] });
+          i += 1;
+          continue;
+        }
+        const dels = [];
+        const adds = [];
+        while (i < lines.length && lines[i].type === 'del') {
+          dels.push({ line: lines[i], after: i + 1 });
+          i += 1;
+        }
+        while (i < lines.length && lines[i].type === 'add') {
+          adds.push({ line: lines[i], after: i + 1 });
+          i += 1;
+        }
+        const n = Math.max(dels.length, adds.length);
+        for (let k = 0; k < n; k += 1) {
+          const del = dels[k];
+          const add = adds[k];
+          rows.push({
+            left: del ? del.line : null,
+            right: add ? add.line : null,
+            after: [del?.after, add?.after].filter(Boolean),
+          });
+        }
+      }
+      return rows;
+    }
+
+    function findingAfterLine(hunk, finding) {
+      if (finding.line == null) return hunk.lines.length;
+      const side = finding.side;
+      for (let i = 0; i < hunk.lines.length; i += 1) {
+        const line = hunk.lines[i];
+        if (side === 'old' && line.oldNo === finding.line) return i + 1;
+        if (side === 'new' && line.newNo === finding.line) return i + 1;
+        if (!side && (line.oldNo === finding.line || line.newNo === finding.line)) return i + 1;
+      }
+      return hunk.lines.length;
+    }
+
+    function highlightLine(text, state) {
+      const frag = document.createDocumentFragment();
+      let i = 0;
+      const n = text.length;
+      const emit = (cls, start, end) => {
+        if (end <= start) return;
+        const slice = text.slice(start, end);
+        if (cls) frag.appendChild(el('span', { class: cls }, slice));
+        else frag.appendChild(document.createTextNode(slice));
+      };
+      const findUnescaped = (from, ch) => {
+        for (let j = from; j < n; j += 1) {
+          if (text[j] === '\\') { j += 1; continue; }
+          if (text[j] === ch) return j;
+        }
+        return -1;
+      };
+      const consumeTemplate = (from) => {
+        let j = from;
+        while (j < n) {
+          if (text[j] === '\\') { j += 2; continue; }
+          if (text[j] === '`') {
+            state.inTemplate = false;
+            return j + 1;
+          }
+          j += 1;
+        }
+        state.inTemplate = true;
+        return n;
+      };
+      if (state.inBlockComment) {
+        const end = text.indexOf('*/');
+        if (end === -1) {
+          emit('tok-cm', 0, n);
+          return frag;
+        }
+        emit('tok-cm', 0, end + 2);
+        i = end + 2;
+        state.inBlockComment = false;
+      } else if (state.inTemplate) {
+        const end = consumeTemplate(0);
+        emit('tok-str', 0, end);
+        i = end;
+      }
+      while (i < n) {
+        const rest = text.slice(i);
+        if (rest.startsWith('//')) {
+          emit('tok-cm', i, n);
+          break;
+        }
+        if (rest.startsWith('/*')) {
+          const end = text.indexOf('*/', i + 2);
+          if (end === -1) {
+            emit('tok-cm', i, n);
+            state.inBlockComment = true;
+            break;
+          }
+          emit('tok-cm', i, end + 2);
+          i = end + 2;
+          continue;
+        }
+        const c = text[i];
+        if (c === '`') {
+          const end = consumeTemplate(i + 1);
+          emit('tok-str', i, end);
+          i = end;
+          continue;
+        }
+        if (c === "'" || c === '"') {
+          const close = findUnescaped(i + 1, c);
+          const end = close === -1 ? n : close + 1;
+          emit('tok-str', i, end);
+          i = end;
+          continue;
+        }
+        if (c === '@' && /[A-Za-z_]/.test(text[i + 1] || '')) {
+          let j = i + 2;
+          while (j < n && /[A-Za-z0-9_]/.test(text[j])) j += 1;
+          emit('tok-dec', i, j);
+          i = j;
+          continue;
+        }
+        if (/[0-9]/.test(c)) {
+          const m = rest.match(/^(0x[0-9a-fA-F]+n?|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?n?)/);
+          if (m) {
+            emit('tok-num', i, i + m[0].length);
+            i += m[0].length;
+            continue;
+          }
+        }
+        if (/[A-Za-z_$]/.test(c)) {
+          let j = i + 1;
+          while (j < n && /[A-Za-z0-9_$]/.test(text[j])) j += 1;
+          const word = text.slice(i, j);
+          if (KEYWORDS.has(word)) emit('tok-kw', i, j);
+          else if (/^[A-Z][A-Za-z0-9_]*$/.test(word)) emit('tok-type', i, j);
+          else emit('', i, j);
+          i = j;
+          continue;
+        }
+        let j = i + 1;
+        while (j < n && !/[A-Za-z_$0-9@`'"]/.test(text[j]) && text[j] !== '/') j += 1;
+        emit('', i, j);
+        i = j;
+      }
+      return frag;
+    }
+
+    function hunkFindings(group, hunk) {
+      return group.findings
+        .map((finding, index) => ({ finding, index }))
+        .filter((item) => item.finding.hunkId === hunk.id);
+    }
+
+    function lineMemoKey(hunkId, side, line) {
+      return `${hunkId}:${side}:${line}`;
+    }
+
+    function parseLineMemoKey(key) {
+      const parts = String(key).split(':');
+      if (parts.length < 3) return null;
+      const line = Number(parts.pop());
+      const side = parts.pop();
+      const hunkId = parts.join(':');
+      if ((side !== 'old' && side !== 'new') || !Number.isFinite(line)) return null;
+      return { hunkId, side, line };
+    }
+
+    function lineMemoLabel(side, line) {
+      return `${side === 'old' ? '旧' : '新'}L${line}`;
+    }
+
+    function hunkLineMemos(group, hunk) {
+      const prefix = `${hunk.id}:`;
+      return Object.entries(states[group.id].lineMemos ?? {}).filter(([key, text]) => (
+        key.startsWith(prefix) && Boolean(text)
+      ));
+    }
+
+    function isPreviewHunk(group, hunk, forceFull) {
+      if (forceFull || hunk.truncated) return false;
+      if (hunkLineMemos(group, hunk).length) return false;
+      return hunkFindings(group, hunk).length === 0 && hunk.lines.length > 60;
+    }
+
+    function closeLineComposer() {
+      const open = document.querySelector('.line-composer');
+      if (!open) return false;
+      const thread = open.closest('tr.line-thread');
+      const key = thread?.dataset.lineKey;
+      const group = data.groups.find((item) => item.id === thread?.dataset.groupId);
+      const saved = group && key ? states[group.id].lineMemos?.[key] : '';
+      if (saved && group) open.replaceWith(renderLineNoteCard(group, key, saved));
+      else thread?.remove();
+      return true;
+    }
+
+    function setLineMemo(group, key, text) {
+      if (!states[group.id].lineMemos) states[group.id].lineMemos = {};
+      if (text.trim()) states[group.id].lineMemos[key] = text;
+      else delete states[group.id].lineMemos[key];
+      persist(group);
+    }
+
+    function renderLineNoteCard(group, key, text) {
+      const parsed = parseLineMemoKey(key);
+      const card = el('div', { class: 'line-note' },
+        el('div', { class: 'line-note-meta' }, parsed ? lineMemoLabel(parsed.side, parsed.line) : key),
+        el('div', { class: 'line-note-text' }, text),
+      );
+      const edit = el('button', { class: 'btn', type: 'button' }, '編集');
+      const remove = el('button', { class: 'btn', type: 'button' }, '削除');
+      edit.addEventListener('click', () => {
+        const thread = card.closest('tr.line-thread');
+        if (!thread || !parsed) return;
+        closeLineComposer();
+        card.replaceWith(renderLineComposer(group, key, parsed.side, parsed.line, text));
+        thread.querySelector('textarea')?.focus();
+      });
+      remove.addEventListener('click', () => {
+        setLineMemo(group, key, '');
+        markLineAdd(key, false);
+        card.closest('tr.line-thread')?.remove();
+      });
+      card.append(el('div', { class: 'line-note-actions' }, edit, remove));
+      return card;
+    }
+
+    function renderLineComposer(group, key, side, line, initial) {
+      const box = el('div', { class: 'line-composer' },
+        el('div', { class: 'line-composer-meta' }, `${lineMemoLabel(side, line)} にメモ`),
+      );
+      const area = el('textarea', { rows: '3' });
+      area.value = initial || '';
+      const cancel = el('button', { class: 'btn', type: 'button' }, 'キャンセル');
+      const save = el('button', { class: 'btn', type: 'button' }, initial ? '更新' : '追加');
+      const commit = () => {
+        const next = area.value.trim();
+        setLineMemo(group, key, next);
+        const thread = box.closest('tr.line-thread');
+        if (!thread) return;
+        if (!next) {
+          markLineAdd(key, false);
+          thread.remove();
+          return;
+        }
+        markLineAdd(key, true);
+        box.replaceWith(renderLineNoteCard(group, key, next));
+      };
+      cancel.addEventListener('click', () => {
+        const thread = box.closest('tr.line-thread');
+        if (initial) box.replaceWith(renderLineNoteCard(group, key, initial));
+        else thread?.remove();
+      });
+      save.addEventListener('click', commit);
+      area.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          cancel.click();
+        }
+        if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+          event.preventDefault();
+          commit();
+        }
+      });
+      box.append(area, el('div', { class: 'line-composer-actions' }, cancel, save));
+      return box;
+    }
+
+    function renderLineThread(group, key, side, line, colCount, text) {
+      const inner = text
+        ? renderLineNoteCard(group, key, text)
+        : renderLineComposer(group, key, side, line, '');
+      return el('tr', {
+        class: 'line-thread',
+        dataset: { lineKey: key, groupId: group.id },
+      }, el('td', { colspan: String(colCount) }, inner));
+    }
+
+    function markLineAdd(key, has) {
+      document.querySelectorAll(`.line-add[data-line-key="${CSS.escape(key)}"]`).forEach((btn) => {
+        btn.closest('.add-cell')?.classList.toggle('has-memo', has);
+        btn.textContent = has ? '·' : '+';
+      });
+    }
+
+    function openLineComposer(group, hunk, key, side, line, afterTr, colCount) {
+      closeLineComposer();
+      const existing = document.querySelector(`tr.line-thread[data-line-key="${CSS.escape(key)}"]`);
+      if (existing) {
+        const saved = states[group.id].lineMemos?.[key] || '';
+        existing.replaceChildren(el('td', { colspan: String(colCount) },
+          renderLineComposer(group, key, side, line, saved),
+        ));
+        existing.querySelector('textarea')?.focus();
+        return;
+      }
+      const thread = renderLineThread(group, key, side, line, colCount, '');
+      afterTr.after(thread);
+      thread.querySelector('textarea')?.focus();
+    }
+
+    function revealLineMemo(hunkId, key) {
+      revealHunk(hunkId);
+      requestAnimationFrame(() => {
+        const row = document.querySelector(`tr.line-thread[data-line-key="${CSS.escape(key)}"]`);
+        if (row) row.scrollIntoView({ behavior: 'instant', block: 'center' });
+      });
+    }
+
+    function renderMemoTools(group, hunkId) {
+      const state = states[group.id];
+      const tools = el('div', { class: 'hunk-tools' });
+      const addBtn = el('button', { class: 'btn', type: 'button' }, state.memos[hunkId] ? 'メモを編集' : 'メモを追加');
+      const area = el('textarea', { class: `memo${state.memos[hunkId] ? '' : ' hidden'}`, rows: '3' });
+      area.value = state.memos[hunkId] || '';
+      addBtn.addEventListener('click', () => area.classList.toggle('hidden'));
+      area.addEventListener('change', () => {
+        if (area.value.trim()) state.memos[hunkId] = area.value;
+        else delete state.memos[hunkId];
+        persist(group);
+      });
+      tools.append(addBtn, area);
+      return tools;
+    }
+
+    function fillHunkBody(box, group, hunk, forceFull) {
+      const body = box.querySelector('.hunk-body');
+      body.replaceChildren();
+      body.style.minHeight = '';
+      const findings = hunkFindings(group, hunk);
+      const sideNotes = findings.filter((item) => item.finding.type !== 'improve');
+      const issues = findings.filter((item) => item.finding.type === 'improve');
+      const hasNotes = sideNotes.length > 0;
+      const state = states[group.id];
+      const preview = isPreviewHunk(group, hunk, forceFull);
+      const highlight = HIGHLIGHT_EXT.test(hunk.path);
+      const leftHl = { inBlockComment: false, inTemplate: false };
+      const rightHl = { inBlockComment: false, inTemplate: false };
+      const table = el('table', { class: hasNotes ? 'diff has-notes' : 'diff' });
+      const cols = [
+        el('col', { class: 'add' }),
+        el('col', { class: 'ln' }),
+        el('col', { class: 'mk' }),
+        el('col', { class: 'code' }),
+        el('col', { class: 'gap' }),
+        el('col', { class: 'add' }),
+        el('col', { class: 'ln' }),
+        el('col', { class: 'mk' }),
+        el('col', { class: 'code' }),
+      ];
+      if (hasNotes) cols.push(el('col', { class: 'note' }));
+      const colCount = cols.length;
+      table.append(el('colgroup', {}, ...cols));
+      const tbody = el('tbody');
+      const attachments = new Map();
+      for (const item of sideNotes) {
+        const at = findingAfterLine(hunk, item.finding);
+        const list = attachments.get(at) ?? [];
+        list.push(item);
+        attachments.set(at, list);
+      }
+      const renderFinding = (item) => {
+        const adopted = state.adoptedFindings.includes(item.index);
+        const label = el('label');
+        const check = el('input', { type: 'checkbox', checked: adopted });
+        check.addEventListener('change', () => {
+          const next = new Set(state.adoptedFindings);
+          if (check.checked) next.add(item.index);
+          else next.delete(item.index);
+          state.adoptedFindings = [...next];
+          persist(group);
+        });
+        const text = el('span');
+        text.append(
+          document.createTextNode(`${findingLabel[item.finding.type] || item.finding.type}: `),
+          document.createTextNode(item.finding.text),
+        );
+        label.append(check, text);
+        return el('div', { class: `finding ${item.finding.type}` }, label);
+      };
+      const paneCells = (line, side, hlState, afterTr) => {
+        if (!line) {
+          return [
+            el('td', { class: 'add-cell row-empty' }),
+            el('td', { class: 'ln row-empty' }),
+            el('td', { class: 'mk row-empty' }),
+            el('td', { class: 'code row-empty' }),
+          ];
+        }
+        const kind = line.type === 'add' ? 'row-add' : line.type === 'del' ? 'row-del' : 'row-ctx';
+        const no = side === 'old' ? line.oldNo : line.newNo;
+        const mk = line.type === 'add' ? '+' : line.type === 'del' ? '-' : ' ';
+        const code = el('td', { class: `code ${kind}` });
+        if (highlight) code.append(highlightLine(line.text, hlState));
+        else code.append(document.createTextNode(line.text));
+        const add = el('td', { class: `add-cell ${kind}` });
+        if (no != null) {
+          const key = lineMemoKey(hunk.id, side, no);
+          const has = Boolean(state.lineMemos?.[key]);
+          const btn = el('button', {
+            class: 'line-add',
+            type: 'button',
+            title: has ? 'メモを編集' : 'メモを追加',
+            'aria-label': has ? 'この行のメモを編集' : 'この行にメモを追加',
+            dataset: { lineKey: key },
+          }, has ? '·' : '+');
+          if (has) add.classList.add('has-memo');
+          btn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            openLineComposer(group, hunk, key, side, no, afterTr(), colCount);
+          });
+          add.append(btn);
+        }
+        return [
+          add,
+          el('td', { class: `ln ${kind}` }, no == null ? '' : String(no)),
+          el('td', { class: `mk ${kind}` }, mk),
+          code,
+        ];
+      };
+      const rows = splitRows(hunk.lines);
+      const keep = preview ? 12 : rows.length;
+      const claimed = new Set();
+      for (let i = 0; i < keep; i += 1) {
+        const row = rows[i];
+        const tr = el('tr', { class: 'diff-row' });
+        tr.append(
+          ...paneCells(row.left, 'old', leftHl, () => tr),
+          el('td', { class: 'gap' }),
+          ...paneCells(row.right, 'new', rightHl, () => tr),
+        );
+        if (hasNotes) {
+          const items = [];
+          for (const at of row.after) {
+            for (const item of attachments.get(at) ?? []) {
+              items.push(item);
+              claimed.add(item.index);
+            }
+          }
+          if (i === keep - 1) {
+            for (const item of sideNotes) {
+              if (!claimed.has(item.index)) items.push(item);
+            }
+          }
+          const note = el('td', { class: 'note' });
+          for (const item of items) note.append(renderFinding(item));
+          tr.append(note);
+        }
+        tbody.append(tr);
+        const sides = [
+          row.left && row.left.oldNo != null ? ['old', row.left.oldNo] : null,
+          row.right && row.right.newNo != null ? ['new', row.right.newNo] : null,
+        ].filter(Boolean);
+        for (const [side, line] of sides) {
+          const key = lineMemoKey(hunk.id, side, line);
+          const text = state.lineMemos?.[key];
+          if (text) tbody.append(renderLineThread(group, key, side, line, colCount, text));
+        }
+      }
+      table.append(tbody);
+      const goalNote = renderHunkGoal(group, hunk);
+      if (goalNote) body.append(goalNote);
+      body.append(table);
+      if (issues.length) {
+        const block = el('div', { class: 'hunk-issues' });
+        for (const item of issues) block.append(renderFinding(item));
+        body.append(block);
+      }
+      if (hunk.truncated) {
+        body.append(el('div', { class: 'truncated-note' }, `残り ${hunk.truncated} 行は省略（HTML に未搭載）`));
+      } else if (preview) {
+        const rest = rows.length - keep;
+        const button = el('button', { class: 'expand', type: 'button' }, `${rest} 行を展開`);
+        button.addEventListener('click', () => ensureHunkBody(box, true));
+        body.append(button);
+      }
+      body.append(renderMemoTools(group, hunk.id));
+    }
+
+    function ensureHunkBody(box, forceFull) {
+      const ref = hunkRefs.get(box);
+      if (!ref) return;
+      if (ref.filled && (!forceFull || ref.full)) return;
+      fillHunkBody(box, ref.group, ref.hunk, Boolean(forceFull));
+      ref.filled = true;
+      ref.full = Boolean(forceFull) || !isPreviewHunk(ref.group, ref.hunk, false);
+      hunkBodyObserver?.unobserve(box);
+      box.removeAttribute('data-pending');
+    }
+
+    function hunkLineNodes(group, hunk) {
+      const file = group.files.find((item) => item.id === hunk.fileId);
+      const path = hunk.meta === 'rename-only' && file?.oldPath
+        ? `${file.oldPath} → ${file.path}`
+        : hunk.path;
+      return [
+        el('span', { class: 'hunk-hid' }, hunk.id),
+        el('span', { class: 'hunk-path', title: path }, path),
+        el('span', { class: 'hunk-hdr' }, hunk.header),
+      ];
+    }
+
+    function goalOf(group, hunkId) {
+      return group.annotations?.find((annotation) => annotation.hunkId === hunkId)?.goal ?? '';
+    }
+
+    function renderHunkGoal(group, hunk) {
+      const goal = goalOf(group, hunk.id);
+      if (!goal) return null;
+      return el('div', { class: 'hunk-goal-note' }, goal);
+    }
+
+    function hunkIndexChildren(group, hunk, mark) {
+      return [
+        group.annotations?.length ? el('span', { class: 'hunk-goal' }, goalOf(group, hunk.id)) : null,
+        mark,
+        ...hunkLineNodes(group, hunk),
+      ];
+    }
+
+    function renderHunkIndex(group) {
+      const list = el('ul', { class: 'hunk-index' });
+      for (const hunk of group.hunks) {
+        const mark = el('span', { class: 'fold-mark' }, '▸');
+        const button = el('button', { class: 'hunk-index-btn', type: 'button' },
+          ...hunkIndexChildren(group, hunk, mark),
+        );
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          revealHunk(hunk.id);
+        });
+        list.append(el('li', {}, button));
+      }
+      return list;
+    }
+
+    function renderHunk(group, hunk) {
+      const box = el('div', {
+        class: 'hunk',
+        id: hunk.id,
+        dataset: { fileId: hunk.fileId, groupId: group.id },
+      });
+      const mark = el('span', { class: 'fold-mark' }, '▾');
+      const head = el('div', { class: 'hunk-head' }, mark, ...hunkLineNodes(group, hunk));
+      head.addEventListener('click', () => {
+        const folded = box.classList.toggle('folded');
+        mark.textContent = folded ? '▸' : '▾';
+        if (!folded) ensureHunkBody(box);
+      });
+      box.append(head);
+      const body = el('div', { class: 'hunk-body' });
+      box.append(body);
+      hunkRefs.set(box, { group, hunk, filled: false, full: false });
+      if (hunk.meta || hunk.lines.length === 0) {
+        const goalNote = renderHunkGoal(group, hunk);
+        if (goalNote) body.append(goalNote);
+        body.append(renderMemoTools(group, hunk.id));
+        hunkRefs.get(box).filled = true;
+        hunkRefs.get(box).full = true;
+        return box;
+      }
+      const rows = isPreviewHunk(group, hunk, false) ? 12 : splitRows(hunk.lines).length;
+      body.style.minHeight = `${Math.min(rows, 60) * 21 + 72}px`;
+      box.setAttribute('data-pending', '1');
+      return box;
+    }
+
+    function enterReading(group) {
+      readingIds.add(group.id);
+      const card = document.getElementById(group.id);
+      if (!card) return;
+      setCollapsed(card, false);
+      card.classList.remove('scanning');
+      const host = card.querySelector('.hunk-host');
+      if (host && host.dataset.filled !== '1') {
+        for (const hunk of group.hunks) host.append(renderHunk(group, hunk));
+        host.dataset.filled = '1';
+        bindObserver();
+      }
+    }
+
+    function leaveReading(group) {
+      readingIds.delete(group.id);
+      const card = document.getElementById(group.id);
+      if (card) card.classList.add('scanning');
+    }
+
+    let mainScrollAnim = 0;
+
+    function scrollMainTo(el, { block = 'start', offset = 20, smooth = false } = {}) {
+      const rootRect = mainEl.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
+      const start = mainEl.scrollTop;
+      let next = start + rect.top - rootRect.top;
+      if (block === 'start') next -= offset;
+      if (block === 'center') next -= (mainEl.clientHeight - rect.height) / 2;
+      const max = Math.max(0, mainEl.scrollHeight - mainEl.clientHeight);
+      next = Math.max(0, Math.min(max, next));
+      cancelAnimationFrame(mainScrollAnim);
+      if (!smooth) {
+        mainEl.scrollTop = next;
+        return;
+      }
+      const delta = next - start;
+      if (Math.abs(delta) < 2) return;
+      const duration = Math.min(380, Math.max(200, Math.abs(delta) * 0.22));
+      const t0 = performance.now();
+      const ease = (t) => 1 - (1 - t) ** 3;
+      const step = (now) => {
+        const p = Math.min(1, (now - t0) / duration);
+        mainEl.scrollTop = start + delta * ease(p);
+        if (p < 1) mainScrollAnim = requestAnimationFrame(step);
+      };
+      mainScrollAnim = requestAnimationFrame(step);
+    }
+
+    function jumpToGroup(group, { focus, read } = {}) {
+      const card = document.getElementById(group.id);
+      if (!card) return;
+      setCollapsed(card, false);
+      if (read) enterReading(group);
+      if (focus) {
+        document.querySelectorAll('.group.focused').forEach((node) => node.classList.remove('focused'));
+        card.classList.add('focused');
+      }
+      scrollMainTo(card, { block: 'start', offset: 20, smooth: true });
+      highlightNav(group.id, group.hunks[0]?.fileId);
+    }
+
+    function revealHunk(hunkId, { smooth = false } = {}) {
+      const group = data.groups.find((item) => item.hunks.some((hunk) => hunk.id === hunkId));
+      if (group) enterReading(group);
+      const hunkEl = document.getElementById(hunkId);
+      if (!hunkEl) return;
+      const card = hunkEl.closest('.group');
+      setCollapsed(card, false);
+      ensureHunkBody(hunkEl);
+      hunkEl.classList.remove('folded');
+      const mark = hunkEl.querySelector('.fold-mark');
+      if (mark) mark.textContent = '▾';
+      const head = hunkEl.querySelector('.hunk-head') || hunkEl;
+      scrollMainTo(head, { block: 'start', offset: 20, smooth });
+      highlightNav(card?.id, hunkEl.dataset.fileId);
+    }
+
+    function renderGroupCard(group, index) {
+      const state = states[group.id];
+      const foldMark = el('span', { class: 'fold-mark group-fold-mark' }, state.checked ? '▸' : '▾');
+      const title = el('h2', { class: 'group-title' }, foldMark, group.title);
+      if (group.isCore) title.append(el('span', { class: 'badge' }, '核'));
+      if (state.checked) title.append(el('span', { class: 'badge checked-badge' }, '確認済'));
+      const scanning = !readingIds.has(group.id);
+      const hasGoals = Boolean(group.annotations?.length);
+      const card = el('section', {
+        class: `group risk-${group.risk}${scanning ? ' scanning' : ''}${hasGoals ? ' has-goals' : ''}${state.checked ? ' checked collapsed' : ''}${index === focusIndex ? ' focused' : ''}`,
+        id: group.id,
+        tabindex: '0',
+      });
+      const makeCheck = () => {
+        const check = el('input', { type: 'checkbox', checked: state.checked });
+        check.addEventListener('click', (event) => event.stopPropagation());
+        check.addEventListener('change', () => {
+          setChecked(group, check.checked);
+        });
+        return check;
+      };
+      const oneLineRow = el('div', { class: 'group-one-line' },
+        el('span', {}, `✓ ${group.id} ${group.title}  `),
+        el('span', { class: 'nav-meta' },
+          el('span', { class: 'badge' }, group.kind),
+          el('span', { class: `badge ${group.risk}` }, riskLabel[group.risk]),
+          group.issueCount ? el('span', { class: 'issue' }, `指摘 ${group.issueCount}`) : null,
+          el('label', { class: 'approve' }, makeCheck(), '確認'),
+        ),
+      );
+      oneLineRow.addEventListener('click', (event) => {
+        if (event.target.closest('input, label.approve')) return;
+        setCollapsed(card, false);
+      });
+      const detailLines = [
+        ...group.files.map((file) => (
+          file.status === 'renamed' ? `renamed ${file.oldPath} → ${file.path}` : `${file.status} ${file.path}`
+        )),
+        ...(group.seeds.length && group.files.length ? [''] : []),
+        ...group.seeds.map((seed) => `${seed.id} ${seed.kind}: ${seed.reason}`),
+      ];
+      const detailBtn = detailLines.length
+        ? el('button', { class: 'btn', type: 'button' }, '詳細')
+        : null;
+      const detailList = el('pre', { class: 'file-list hidden' });
+      detailList.append(document.createTextNode(detailLines.join('\n')));
+      detailBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        detailList.classList.toggle('hidden');
+      });
+      const head = el('div', { class: 'group-head' },
+        title,
+        el('label', { class: 'approve' }, makeCheck(), '確認'),
+      );
+      head.addEventListener('click', (event) => {
+        if (event.target.closest('input, label.approve, button')) return;
+        setCollapsed(card, !card.classList.contains('collapsed'));
+      });
+      const readBtn = el('button', { class: 'btn read-enter', type: 'button' }, '精読');
+      readBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        enterReading(group);
+      });
+      const body = el('div', { class: 'group-body' },
+        el('p', { class: 'intent' }, el('b', {}, '意図: '), group.intent),
+        el('div', { class: 'group-meta' },
+          el('span', { class: 'badge' }, group.kind),
+          el('span', { class: `badge ${group.risk}` }, riskLabel[group.risk]),
+          detailBtn,
+          readBtn,
+        ),
+        detailList,
+      );
+      if (group.riskReason) body.append(el('div', { class: 'risk-reason' }, `理由: ${group.riskReason}`));
+      if (group.hunks.length) body.append(renderHunkIndex(group));
+      const hunkHost = el('div', { class: 'hunk-host' });
+      if (readingIds.has(group.id)) {
+        for (const hunk of group.hunks) hunkHost.append(renderHunk(group, hunk));
+        hunkHost.dataset.filled = '1';
+      }
+      const readBody = el('div', { class: 'read-body' }, hunkHost);
+      const groupMemoBtn = el('button', { class: 'btn', type: 'button' }, 'グループメモ');
+      const groupArea = el('textarea', { class: `memo${state.memos.group ? '' : ' hidden'}` });
+      groupArea.value = state.memos.group || '';
+      groupMemoBtn.addEventListener('click', () => groupArea.classList.toggle('hidden'));
+      groupArea.addEventListener('change', () => {
+        if (groupArea.value.trim()) state.memos.group = groupArea.value;
+        else delete state.memos.group;
+        persist(group);
+      });
+      readBody.append(el('div', { class: 'hunk-tools' }, groupMemoBtn, groupArea));
+      body.append(readBody);
+      card.append(oneLineRow, head, body);
+      card.addEventListener('focus', () => { focusIndex = index; });
+      return card;
+    }
+
+    function renderBrief() {
+      const brief = document.getElementById('brief');
+      const core = data.groups.find((group) => group.id === data.core);
+      const readOrder = el('div', { class: 'brief-links' });
+      for (const group of data.groups) {
+        const btn = el('button', { class: 'btn', type: 'button' }, group.isCore ? `${group.id} 核` : group.id);
+        btn.addEventListener('click', () => jumpToGroup(group, { focus: true }));
+        readOrder.append(btn);
+      }
+      const coreBtn = el('button', { class: 'btn', type: 'button' }, core ? `${core.id} ${core.title}` : data.core || '');
+      coreBtn.addEventListener('click', () => {
+        if (core) jumpToGroup(core, { focus: true });
+      });
+      brief.replaceChildren(
+        el('h2', {}, '理解カード'),
+        el('dl', { class: 'brief-dl' },
+          el('div', { class: 'brief-row' }, el('dt', {}, '問題'), el('dd', {}, data.problem || '')),
+          el('div', { class: 'brief-row' }, el('dt', {}, '狙い'), el('dd', {}, data.summary || '')),
+          el('div', { class: 'brief-row' }, el('dt', {}, '核'), el('dd', {}, coreBtn)),
+          el('div', { class: 'brief-row' }, el('dt', {}, '読む順'), el('dd', {}, readOrder)),
+          el('div', { class: 'brief-row' }, el('dt', {}, '完了条件'), el('dd', {}, data.doneWhen || '')),
+        ),
+      );
+    }
+
+    function renderGroups() {
+      renderBrief();
+      const groups = sortedGroups();
+      groupsEl.replaceChildren(...groups.map((group, index) => renderGroupCard(group, index)));
+      bindObserver();
+    }
+
+    function renderGroupNav() {
+      const groups = sortedGroups();
+      document.getElementById('tab-groups').replaceChildren(
+        ...groups.map((group) => {
+          const checked = states[group.id].checked;
+          const row = el('div', {
+            class: `nav-group${checked ? ' checked' : ''}`,
+            dataset: { id: group.id },
+          },
+            el('div', { class: 'nav-left' },
+              el('span', { class: 'nav-mark' }, checked ? '✓' : '○'),
+              el('span', {}, group.id),
+              el('span', { class: 'nav-title', title: group.title }, oneLine(group.title, 28)),
+            ),
+            el('div', { class: 'nav-meta' },
+              group.isCore ? el('span', { class: 'badge' }, '核') : null,
+              el('span', { class: `badge ${group.risk}` }, riskLabel[group.risk]),
+              group.issueCount ? el('span', { class: 'issue' }, String(group.issueCount)) : null,
+            ),
+          );
+          row.addEventListener('click', () => jumpToGroup(group));
+          return row;
+        }),
+      );
+    }
+
+    function shortLabel(label) {
+      if (label.length <= 36) return { text: label, title: label };
+      return { text: `…${label.slice(-32)}`, title: label };
+    }
+
+    function compressNode(node) {
+      while (node.children.size === 1 && !node.file) {
+        const child = node.children.values().next().value;
+        if (child.file && child.children.size === 0) break;
+        node.name = node.name ? `${node.name}/${child.name}` : child.name;
+        node.children = child.children;
+        node.file = child.file;
+      }
+      for (const child of node.children.values()) compressNode(child);
+    }
+
+    function buildFileTree(files) {
+      const root = { name: '', children: new Map(), file: null };
+      for (const file of files) {
+        const parts = file.path.split('/').filter(Boolean);
+        let node = root;
+        for (let i = 0; i < parts.length; i += 1) {
+          const name = parts[i];
+          if (!node.children.has(name)) {
+            node.children.set(name, { name, children: new Map(), file: null });
+          }
+          node = node.children.get(name);
+          if (i === parts.length - 1) node.file = file;
+        }
+      }
+      for (const child of root.children.values()) compressNode(child);
+      return root;
+    }
+
+    function renderTreeNode(node) {
+      const wrap = el('div', { class: 'tree-node' });
+      if (node.file && node.children.size === 0) {
+        wrap.append(renderFileRow(node.file, node.name));
+        return wrap;
+      }
+      const shown = shortLabel(node.name);
+      const dir = el('div', { class: 'tree-dir' },
+        el('span', { class: 'dir-mark' }, '▾'),
+        el('span', { title: shown.title }, shown.text),
+      );
+      dir.addEventListener('click', () => {
+        wrap.classList.toggle('closed');
+        dir.querySelector('.dir-mark').textContent = wrap.classList.contains('closed') ? '▸' : '▾';
+      });
+      const kids = el('div', { class: 'tree-children' });
+      if (node.file) kids.append(renderFileRow(node.file, node.name.split('/').pop()));
+      for (const child of node.children.values()) kids.append(renderTreeNode(child));
+      wrap.append(dir, kids);
+      return wrap;
+    }
+
+    function renderFileRow(file, name) {
+      const letter = statusLetter[file.status] || 'M';
+      const shown = shortLabel(name || file.path.split('/').pop());
+      const tags = (file.tags ?? []).filter((tag) => tag === 'data' || tag === 'generated');
+      const row = el('div', {
+        class: 'tree-file',
+        dataset: { fileId: file.id },
+        title: file.path,
+      },
+        el('span', { class: `st ${letter}` }, letter),
+        el('span', { class: 'file-name' }, shown.text),
+        el('span', { class: 'file-right' },
+          fileGroupLabel(file),
+          ...tags.map((tag) => el('span', { class: 'badge' }, tag)),
+        ),
+      );
+      row.addEventListener('click', () => {
+        const hunkId = firstHunkId(file);
+        if (hunkId) revealHunk(hunkId, { smooth: true });
+      });
+      return row;
+    }
+
+    function renderFileTree() {
+      const root = buildFileTree(data.files ?? []);
+      const tree = el('div', { class: 'tree' });
+      for (const child of root.children.values()) tree.append(renderTreeNode(child));
+      document.getElementById('tab-files').replaceChildren(tree);
+    }
+
+    function setSideTab(tab) {
+      sideTab = tab;
+      document.getElementById('tab-btn-groups').classList.toggle('active', tab === 'groups');
+      document.getElementById('tab-btn-files').classList.toggle('active', tab === 'files');
+      document.getElementById('tab-btn-memos').classList.toggle('active', tab === 'memos');
+      document.getElementById('tab-groups').classList.toggle('hidden', tab !== 'groups');
+      document.getElementById('tab-files').classList.toggle('hidden', tab !== 'files');
+      document.getElementById('tab-memos').classList.toggle('hidden', tab !== 'memos');
+      document.getElementById('sort-bar').classList.toggle('hidden', tab !== 'groups');
+      if (tab === 'memos') renderMemoList();
+    }
+
+    function setHelpOpen(open) {
+      const wrap = document.getElementById('help-float');
+      const btn = document.getElementById('help-toggle');
+      wrap.classList.toggle('closed', !open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      try { localStorage.setItem(helpKey, open ? 'open' : 'closed'); } catch { /* ignore */ }
+    }
+
+    function setSidebarOpen(open) {
+      sidebarOpen = open;
+      document.body.classList.toggle('sidebar-closed', !open);
+      const btn = document.getElementById('sidebar-toggle');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.setAttribute('aria-label', open ? 'サイドバーを閉じる' : 'サイドバーを開く');
+      try { localStorage.setItem(sidebarKey, open ? 'open' : 'closed'); } catch { /* ignore */ }
+    }
+
+    function inSidebarView(node) {
+      if (!sidebarOpen) return true;
+      const side = document.getElementById('sidebar');
+      const sr = side.getBoundingClientRect();
+      const nr = node.getBoundingClientRect();
+      return nr.top >= sr.top && nr.bottom <= sr.bottom;
+    }
+
+    function highlightNav(groupId, fileId) {
+      document.querySelectorAll('.nav-group.active').forEach((node) => node.classList.remove('active'));
+      document.querySelectorAll('.tree-file.active').forEach((node) => node.classList.remove('active'));
+      const groupRow = document.querySelector(`.nav-group[data-id="${groupId}"]`);
+      if (groupRow) {
+        groupRow.classList.add('active');
+        if (!inSidebarView(groupRow)) groupRow.scrollIntoView({ block: 'nearest' });
+      }
+      if (fileId) {
+        const fileRow = document.querySelector(`.tree-file[data-file-id="${fileId}"]`);
+        if (fileRow) {
+          fileRow.classList.add('active');
+          if (!inSidebarView(fileRow)) fileRow.scrollIntoView({ block: 'nearest' });
+        }
+      }
+    }
+
+    function bindObserver() {
+      if (observer) observer.disconnect();
+      observer = new IntersectionObserver((entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting);
+        if (visible.length === 0) return;
+        const top = visible.reduce((best, entry) => {
+          const dist = Math.abs(entry.boundingClientRect.top);
+          return !best || dist < best.dist ? { el: entry.target, dist } : best;
+        }, null);
+        if (!top) return;
+        const card = top.el.classList.contains('group') ? top.el : top.el.closest('.group');
+        const hunk = top.el.classList.contains('hunk') ? top.el : card?.querySelector('.hunk');
+        highlightNav(card?.id, hunk?.dataset.fileId);
+      }, { root: mainEl, rootMargin: '-8% 0px -70% 0px', threshold: 0.01 });
+      document.querySelectorAll('.group, .hunk').forEach((node) => observer.observe(node));
+
+      if (hunkBodyObserver) hunkBodyObserver.disconnect();
+      hunkBodyObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          ensureHunkBody(entry.target);
+        }
+      }, { root: mainEl, rootMargin: '800px 0px' });
+      document.querySelectorAll('.hunk[data-pending="1"]').forEach((node) => hunkBodyObserver.observe(node));
+    }
+
+    document.getElementById('side-title').textContent = data.title || '差分レビュー';
+    document.getElementById('side-stats').textContent = `${data.stats.files} files / ${data.stats.hunks} hunks +${data.stats.additions} -${data.stats.deletions}`;
+    document.getElementById('sidebar-toggle').addEventListener('click', () => {
+      setSidebarOpen(!sidebarOpen);
+    });
+    document.getElementById('copy-btn').addEventListener('click', copyMemos);
+    document.getElementById('tab-btn-groups').addEventListener('click', () => setSideTab('groups'));
+    document.getElementById('tab-btn-files').addEventListener('click', () => setSideTab('files'));
+    document.getElementById('tab-btn-memos').addEventListener('click', () => setSideTab('memos'));
+    document.getElementById('sort-bar').append(
+      el('button', { class: 'btn active', type: 'button', id: 'sort-read' }, '読む順'),
+      el('button', { class: 'btn', type: 'button', id: 'sort-risk' }, '注意度順'),
+    );
+    document.getElementById('sort-read').addEventListener('click', () => {
+      sortMode = 'read';
+      document.getElementById('sort-read').classList.add('active');
+      document.getElementById('sort-risk').classList.remove('active');
+      renderGroupNav();
+      renderGroups();
+    });
+    document.getElementById('sort-risk').addEventListener('click', () => {
+      sortMode = 'risk';
+      document.getElementById('sort-risk').classList.add('active');
+      document.getElementById('sort-read').classList.remove('active');
+      renderGroupNav();
+      renderGroups();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      const tag = event.target.tagName;
+      if (tag === 'TEXTAREA' || tag === 'INPUT') {
+        if (event.key === 'Escape' && closeLineComposer()) event.preventDefault();
+        return;
+      }
+      if (event.key === 'Escape' && closeLineComposer()) return;
+      if (event.key === 'j') setFocus(focusIndex + 1);
+      if (event.key === 'k') setFocus(focusIndex - 1);
+      if (event.key === 'J') setFileFocus(1);
+      if (event.key === 'K') setFileFocus(-1);
+      if (event.key === 'c') {
+        const group = sortedGroups()[focusIndex];
+        if (!group) return;
+        setChecked(group, !states[group.id].checked);
+      }
+      if (event.key === 'e') {
+        const group = sortedGroups()[focusIndex];
+        if (!group) return;
+        if (readingIds.has(group.id)) leaveReading(group);
+        else enterReading(group);
+        jumpToGroup(group, { focus: true });
+      }
+      if (event.key === 'f') setSideTab(sideTab === 'groups' ? 'files' : 'groups');
+      if (event.key === '[') setSidebarOpen(!sidebarOpen);
+      if (event.key === '?' || event.key === 'Escape') {
+        const helpOpen = !document.getElementById('help-float').classList.contains('closed');
+        if (event.key === 'Escape') {
+          if (helpOpen) setHelpOpen(false);
+          return;
+        }
+        setHelpOpen(!helpOpen);
+      }
+    });
+
+    document.title = data.title || '差分レビュー';
+    try { sidebarOpen = localStorage.getItem(sidebarKey) !== 'closed'; } catch { sidebarOpen = true; }
+    setSidebarOpen(sidebarOpen);
+    let helpOpen = true;
+    try { helpOpen = localStorage.getItem(helpKey) !== 'closed'; } catch { helpOpen = true; }
+    setHelpOpen(helpOpen);
+    document.getElementById('help-toggle').addEventListener('click', () => {
+      setHelpOpen(document.getElementById('help-float').classList.contains('closed'));
+    });
+    document.getElementById('help-close').addEventListener('click', () => setHelpOpen(false));
+    updateProgress();
+    renderGroupNav();
+    renderFileTree();
+    renderMemoList();
+    renderGroups();
+  </script>
+</body>
+</html>

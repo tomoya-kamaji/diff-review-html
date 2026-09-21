@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "diff-review-html",
+  "description": "Groups a large git diff into intent-based review units and writes a single local HTML app.",
+  "version": "1.0.0",
+  "author": {
+    "name": "tomoya-kamaji",
+    "url": "https://github.com/tomoya-kamaji"
+  },
+  "homepage": "https://github.com/tomoya-kamaji/diff-review-html",
+  "repository": "https://github.com/tomoya-kamaji/diff-review-html",
+  "license": "MIT",
+  "keywords": ["diff", "review", "html", "git", "skills"]
+}
