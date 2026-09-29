@@ -538,7 +538,6 @@
         <div class="help-row"><dt>J</dt><dd>次のファイル</dd></div>
         <div class="help-row"><dt>K</dt><dd>前のファイル</dd></div>
         <div class="help-row"><dt>+</dt><dd>行にメモ（ホバー）</dd></div>
-        <div class="help-row"><dt>c</dt><dd>確認の切り替え</dd></div>
         <div class="help-row"><dt>f</dt><dd>グループ / ファイル</dd></div>
         <div class="help-row"><dt>e</dt><dd>走査と精読の切り替え</dd></div>
         <div class="help-row"><dt>[</dt><dd>サイドバー開閉</dd></div>
@@ -1858,11 +1857,6 @@
       if (event.key === 'k') setFocus(focusIndex - 1);
       if (event.key === 'J') setFileFocus(1);
       if (event.key === 'K') setFileFocus(-1);
-      if (event.key === 'c') {
-        const group = sortedGroups()[focusIndex];
-        if (!group) return;
-        setChecked(group, !states[group.id].checked);
-      }
       if (event.key === 'e') {
         const group = sortedGroups()[focusIndex];
         if (!group) return;

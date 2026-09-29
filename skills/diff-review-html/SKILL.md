@@ -73,7 +73,6 @@ model: /Users/<name>/.cursor/diff-review/YYYY-MM-DD-diff-review-<slug>.model.jso
 | --- | --- |
 | `j` / `k` | 次 / 前のグループ |
 | `J` / `K` | 読む順の次 / 前のファイル |
-| `c` | 確認の切り替え |
 | `f` | グループ / ファイルタブ |
 | `e` | 走査と精読の切り替え |
 | `[` | サイドバー開閉 |
